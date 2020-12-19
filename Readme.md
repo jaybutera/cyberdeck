@@ -2,4 +2,5 @@
 Cyberdecks allow for the use of Plugs, which are a type of implant that allows
 for a direct neural link to the Cyberdeck. This allows the user to experience
 a fully immersive 3D world. Because it is so much more intuitive, the user can
-accomplish things much faster." - Cyberpunk 2020 fandom
+accomplish things much faster." - [Cyberpunk 2020
+fandom](https://cyberpunk.fandom.com/wiki/Cyberpunk_2020_Cyberware)
