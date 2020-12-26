@@ -1,22 +1,27 @@
 (ns cyberdeck.core
   (:gen-class)
-  (:use [org.httpkit.server :as httpkit]))
+  (:require [org.httpkit.server :as httpkit :refer [with-channel on-receive on-close send!]]
+            [konserve.filestore :refer [new-fs-store]]
+            [clojure.core.async :refer [<!!]]
+            [konserve.core :as k]))
 
-(def STORAGE_FILE "tmp.cbd")
+(try
+  (def store (<!! (new-fs-store "./tm")))
+  (catch Exception e
+    (println "Failed to establish new fs-store" e)))
 
-(defn defn-name [expr]
+(defn defn-name
   "Takes a parsed expression object and extracts the name from the data value.
   The expression is assumed to be a `defn`."
-  (println "expr::" expr)
+  [expr]
   (nth (:data expr) 1)) ; (defn x ..)
 
-(defn save-to-file [fname data]
-  (let [db (clojure.edn/read-string (slurp fname))
-        data-name (defn-name (first data))
-        new-db (assoc db data-name data)]
-    (spit fname (str new-db))))
+(defn save-expr
+  "Write an s-expression object with its name as the key, the object as the value."
+  [expr]
+  (<!! (k/assoc store (:name expr) expr)))
 
-(defn load-from-file [fname data]
+(defn load-expr [fname data]
   "") ; Implement
 
 
@@ -28,8 +33,9 @@
                           (println msg)
                           (let [op (clojure.edn/read-string msg)]
                             (cond
-                              (= (:action op) "save") (save-to-file STORAGE_FILE (:data op))
-                              (= (:action op) "load") (load-from-file STORAGE_FILE (:data op))))
+                              (= (:action op) "save") (doall (map save-expr (:data op)))
+                              (= (:action op) "load") (doall (map load-expr (:data op)))
+                              :else (println "Unrecognized msg format:\n" msg)))
                           (send! channel msg)))))
 
 (defn -main
