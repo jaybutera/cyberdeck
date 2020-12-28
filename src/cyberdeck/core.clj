@@ -2,7 +2,7 @@
   (:gen-class)
   (:require [org.httpkit.server :as httpkit :refer [with-channel on-receive on-close send!]]
             [konserve.filestore :refer [new-fs-store]]
-            [clojure.core.async :refer [<!!]]
+            [clojure.core.async :as a :refer [<!!]]
             [konserve.core :as k]))
 
 (try
@@ -21,8 +21,20 @@
   [expr]
   (<!! (k/assoc store (:name expr) expr)))
 
-(defn load-expr [fname data]
-  "") ; Implement
+(defn load-expr
+  [e-name]
+  (<!! (k/get store e-name)))
+
+(defn all-uuids []
+  (let [c (k/keys store)
+        key-set (<!! c)]
+    (map #(:key %) key-set)))
+
+(defn send-exprs
+  "Send a list of expressions on a given channel."
+  [channel es]
+  (println "es" es)
+  (send! channel (str {:action "load" :exprs es})))
 
 
 (defn handler [req]
@@ -34,12 +46,11 @@
                           (let [op (clojure.edn/read-string msg)]
                             (cond
                               (= (:action op) "save") (doall (map save-expr (:data op)))
-                              (= (:action op) "load") (doall (map load-expr (:data op)))
-                              :else (println "Unrecognized msg format:\n" msg)))
-                          (send! channel msg)))))
+                              (= (:action op) "load") (send-exprs channel (map load-expr (:names op)))
+                              (= (:action op) "load-all") (send-exprs channel (map load-expr (all-uuids)))
+                              :else (println "Unrecognized msg format:\n" msg)))))))
 
 (defn -main
-  "Something useful?"
   [& args]
   (println "Starting cyberdeck on port 8080...")
   (httpkit/run-server handler {:port 8080}))
