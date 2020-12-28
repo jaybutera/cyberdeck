@@ -6,7 +6,7 @@
             [konserve.core :as k]))
 
 (try
-  (def store (<!! (new-fs-store "./tm")))
+  (def store (<!! (new-fs-store "./tmp")))
   (catch Exception e
     (println "Failed to establish new fs-store" e)))
 
@@ -20,6 +20,11 @@
   "Write an s-expression object with its name as the key, the object as the value."
   [expr]
   (<!! (k/assoc store (:name expr) expr)))
+
+(defn rm-expr
+  "Dissociate an s-expression object from the database."
+  [uuid]
+  (<!! (k/dissoc store uuid)))
 
 (defn load-expr
   [e-name]
@@ -46,6 +51,7 @@
                           (let [op (clojure.edn/read-string msg)]
                             (cond
                               (= (:action op) "save") (doall (map save-expr (:data op)))
+                              (= (:action op) "delete") (doall (map rm-expr (:uuids op)))
                               (= (:action op) "load") (send-exprs channel (map load-expr (:names op)))
                               (= (:action op) "load-all") (send-exprs channel (map load-expr (all-uuids)))
                               :else (println "Unrecognized msg format:\n" msg)))))))
